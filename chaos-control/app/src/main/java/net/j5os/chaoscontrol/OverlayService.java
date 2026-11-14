@@ -1,0 +1,42 @@
+package net.j5os.chaoscontrol;
+import android.app.*;
+import android.content.*;
+import android.content.pm.*;
+import android.graphics.PixelFormat;
+import android.graphics.drawable.GradientDrawable;
+import android.os.*;
+import android.provider.Settings;
+import android.view.*;
+import android.widget.*;
+import java.util.*;
+import java.io.ByteArrayOutputStream;
+import java.util.concurrent.*;
+
+public class OverlayService extends Service {
+ final int green=0xff39ff88;
+ final Handler h=new Handler(Looper.getMainLooper());
+ final ExecutorService worker=Executors.newSingleThreadExecutor();
+ WindowManager wm; LinearLayout hud,tools; WindowManager.LayoutParams hp,tp;
+ TextView metrics,points; boolean hudSmall=false,toolSmall=false,apps=false,active=false,busy=false;
+ long total=-1,idle=-1; String cpu="--"; int lastPoints=-1;
+ int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
+ TextView label(String s,int size){TextView v=new TextView(this);v.setText(s);v.setTextColor(green);v.setTextSize(size);v.setPadding(dp(6),dp(5),dp(6),dp(5));return v;}
+ LinearLayout panel(){LinearLayout l=new LinearLayout(this);l.setOrientation(1);l.setPadding(dp(5),dp(5),dp(5),dp(5));GradientDrawable d=new GradientDrawable();d.setColor(0xed090e13);d.setCornerRadius(dp(12));d.setStroke(dp(1),0xff31684a);l.setBackground(d);return l;}
+ WindowManager.LayoutParams params(int y){WindowManager.LayoutParams p=new WindowManager.LayoutParams(-2,-2,WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,PixelFormat.TRANSLUCENT);p.gravity=Gravity.TOP|Gravity.LEFT;p.x=Math.max(0,getResources().getDisplayMetrics().widthPixels-dp(175));p.y=dp(y);return p;}
+ void drag(TextView v,LinearLayout l,WindowManager.LayoutParams p){v.setOnTouchListener(new View.OnTouchListener(){float x,y;int ox,oy;boolean moved;public boolean onTouch(View view,android.view.MotionEvent e){switch(e.getAction()){case MotionEvent.ACTION_DOWN:x=e.getRawX();y=e.getRawY();ox=p.x;oy=p.y;moved=false;return true;case MotionEvent.ACTION_MOVE:int dx=(int)(e.getRawX()-x),dy=(int)(e.getRawY()-y);if(Math.abs(dx)+Math.abs(dy)>dp(5))moved=true;if(moved){p.x=Math.max(0,Math.min(getResources().getDisplayMetrics().widthPixels-l.getWidth(),ox+dx));p.y=Math.max(0,Math.min(getResources().getDisplayMetrics().heightPixels-l.getHeight(),oy+dy));wm.updateViewLayout(l,p);}return true;case MotionEvent.ACTION_UP:if(!moved)view.performClick();return true;}return true;}});}
+ void action(LinearLayout l,String s,Runnable r){TextView v=label(s,14);v.setOnClickListener(w->r.run());l.addView(v);}
+ void open(Intent i){try{i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);startActivity(i);}catch(Exception e){Toast.makeText(this,"Açılamadı",0).show();}apps=false;toolSmall=true;drawTools();}
+ void home(String section){Intent i=new Intent(this,MainActivity.class);i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);i.putExtra("section",section);open(i);}
+ void drawHud(){hud.removeAllViews();TextView head=label(hudSmall?"◈ HUD":"CHAOS HUD   −",13);hud.addView(head);head.setOnClickListener(v->{hudSmall=!hudSmall;drawHud();});drag(head,hud,hp);if(!hudSmall){metrics=label("CPU --\nRAM --\nBAT --",13);points=label("0 CP",16);hud.addView(metrics);hud.addView(points);action(hud,"Ana panel",()->home("main"));}else{metrics=null;points=null;}refresh();}
+ void drawTools(){tools.removeAllViews();TextView head=label(toolSmall?"⚙ TOOL":"CHAOS TOOLBOX   −",13);tools.addView(head);head.setOnClickListener(v->{toolSmall=!toolSmall;apps=false;drawTools();});drag(head,tools,tp);if(toolSmall)return;
+ if(apps){action(tools,"← Araç kutusu",()->{apps=false;drawTools();});ScrollView scroll=new ScrollView(this);LinearLayout list=new LinearLayout(this);list.setOrientation(1);scroll.addView(list);tools.addView(scroll,new LinearLayout.LayoutParams(dp(165),dp(225)));Intent q=new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);List<ResolveInfo> entries=getPackageManager().queryIntentActivities(q,0);entries.sort(new ResolveInfo.DisplayNameComparator(getPackageManager()));for(ResolveInfo info:entries){String title=info.loadLabel(getPackageManager()).toString();action(list,title,()->{Intent i=new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setClassName(info.activityInfo.packageName,info.activityInfo.name);open(i);});}return;}
+ action(tools,"Ana kontrol paneli",()->home("main"));action(tools,"Uygulamalar ›",()->{apps=true;drawTools();});action(tools,"Chaos Points",()->home("points"));action(tools,"Root terminal",()->home("terminal"));action(tools,"Sistem ayarları",()->open(new Intent(Settings.ACTION_SETTINGS)));action(tools,"HUD göster / gizle",()->{hudSmall=!hudSmall;drawHud();});action(tools,"Küçült",()->{toolSmall=true;drawTools();});action(tools,"Pencereleri kapat",()->stopSelf());
+ }
+ @Override public int onStartCommand(Intent i,int flags,int id){if(!Settings.canDrawOverlays(this)){stopSelf();return START_NOT_STICKY;}if(!active){NotificationManager nm=getSystemService(NotificationManager.class);nm.createNotificationChannel(new NotificationChannel("hud","Chaos HUD",NotificationManager.IMPORTANCE_LOW));PendingIntent go=PendingIntent.getActivity(this,0,new Intent(this,MainActivity.class),PendingIntent.FLAG_IMMUTABLE);startForeground(22,new Notification.Builder(this,"hud").setSmallIcon(android.R.drawable.ic_menu_manage).setContentTitle("Chaos HUD & Toolbox").setContentText("Yüzen araçlar çalışıyor").setContentIntent(go).build());wm=getSystemService(WindowManager.class);hud=panel();tools=panel();hp=params(70);tp=params(245);try{wm.addView(hud,hp);wm.addView(tools,tp);active=true;drawHud();drawTools();h.post(tick);}catch(Exception e){stopSelf();}}return START_NOT_STICKY;}
+ final Runnable tick=new Runnable(){public void run(){if(active){refresh();sample();h.postDelayed(this,4000);}}};
+ void refresh(){if(metrics!=null){ActivityManager.MemoryInfo m=new ActivityManager.MemoryInfo();getSystemService(ActivityManager.class).getMemoryInfo(m);Intent b=registerReceiver(null,new IntentFilter(Intent.ACTION_BATTERY_CHANGED));int pct=b==null?0:b.getIntExtra("level",0)*100/Math.max(1,b.getIntExtra("scale",100));float temp=b==null?0:b.getIntExtra("temperature",0)/10f;metrics.setText("CPU  "+cpu+"\nRAM  "+(100*(m.totalMem-m.availMem)/Math.max(1,m.totalMem))+"%\nBAT  "+pct+"%  "+temp+"°C");}int p=getSharedPreferences("chaos",0).getInt("points",0);if(points!=null)points.setText(p+" CP"+(lastPoints>=0&&p>lastPoints?"  +"+(p-lastPoints):""));lastPoints=p;}
+ String run(String cmd)throws Exception{java.lang.Process p=new ProcessBuilder("su","-c",cmd).redirectErrorStream(true).start();ByteArrayOutputStream b=new ByteArrayOutputStream();Thread t=new Thread(()->{try(java.io.InputStream in=p.getInputStream()){byte[] a=new byte[4096];int n;while((n=in.read(a))!=-1){if(b.size()<2000000)b.write(a,0,n);}}catch(Exception ignored){}});t.start();if(!p.waitFor(7,TimeUnit.SECONDS)){p.destroyForcibly();throw new Exception("timeout");}t.join(1000);if(p.exitValue()!=0)throw new Exception("root");return b.toString("UTF-8");}
+ void sample(){if(busy)return;busy=true;worker.execute(()->{try{String[] a=run("head -n 1 /proc/stat").trim().split("\\s+");long sum=0;for(int j=1;j<Math.min(a.length,9);j++)sum+=Long.parseLong(a[j]);long ii=Long.parseLong(a[4])+Long.parseLong(a[5]);if(total>=0&&sum>total){String s=Math.max(0,Math.min(100,(int)(100*(sum-total-ii+idle)/(sum-total))))+"%";h.post(()->cpu=s);}total=sum;idle=ii;CrashPoints.scan(this,run("logcat -b events -d -v epoch -s am_crash am_anr"));}catch(Exception ignored){}h.post(()->{busy=false;refresh();});});}
+ @Override public IBinder onBind(Intent i){return null;}
+ @Override public void onDestroy(){active=false;h.removeCallbacksAndMessages(null);if(wm!=null){try{wm.removeView(hud);}catch(Exception ignored){}try{wm.removeView(tools);}catch(Exception ignored){}}worker.shutdownNow();stopForeground(true);super.onDestroy();}
+}
