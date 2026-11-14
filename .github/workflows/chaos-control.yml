@@ -1,0 +1,29 @@
+name: Chaos Control APK
+on:
+  push:
+    paths:
+      - 'chaos-control/**'
+      - '.github/workflows/chaos-control.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - run: gradle :app:assembleDebug --stacktrace
+        working-directory: chaos-control
+      - run: cp chaos-control/app/build/outputs/apk/debug/app-debug.apk ChaosControl.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ChaosControl
+          path: ChaosControl.apk
+          if-no-files-found: error
