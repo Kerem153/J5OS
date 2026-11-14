@@ -18,7 +18,7 @@ public class MainActivity extends Activity {
  LinearLayout body; TextView cpu,ram,disk,battery,root,score,history,network; ProgressBar rb,db,bb,cb;
  android.content.SharedPreferences prefs; boolean running=false,busy=false; long lastTotal=-1,lastIdle=-1,lastRx=-1,lastTx=-1,lastTime=0;
  String run(String cmd) throws Exception {
-  Process p=new ProcessBuilder("su","-c",cmd).redirectErrorStream(true).start();
+  java.lang.Process p=new ProcessBuilder("su","-c",cmd).redirectErrorStream(true).start();
   ByteArrayOutputStream b=new ByteArrayOutputStream();
   Thread t=new Thread(()->{try(InputStream in=p.getInputStream()){byte[] a=new byte[4096];int n;while((n=in.read(a))!=-1){if(b.size()<2000000)b.write(a,0,n);}}catch(Exception e){}});
   t.start(); if(!p.waitFor(8,TimeUnit.SECONDS)){p.destroyForcibly();throw new IOException("timeout");} t.join(1000);
