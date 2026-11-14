@@ -4,7 +4,7 @@ from io import BytesIO
 from zipfile import ZipFile, ZIP_STORED, ZIP_DEFLATED
 from pathlib import Path
 names=['apple-electrocution','oneplus','pixel','windows','ea','xbox','nsa']
-base='https://raw.githubusercontent.com/John0n1/SMbootFX/main/examples/'
+base='https://raw.githubusercontent.com/John0n1/SMbootFX/master/examples/'
 out=Path('dist'); out.mkdir(exist_ok=True)
 fps=20
 desc=['720 1280 20']
