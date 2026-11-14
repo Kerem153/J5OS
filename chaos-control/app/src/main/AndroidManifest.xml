@@ -8,6 +8,7 @@
 <uses-permission android:name="android.permission.VIBRATE"/>
 <uses-permission android:name="android.permission.BLUETOOTH"/>
 <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
+<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
 <application android:label="Chaos Control" android:theme="@android:style/Theme.Material.NoActionBar" android:allowBackup="false" android:icon="@android:drawable/ic_menu_manage">
 <activity android:name=".MainActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity>
 <service android:name=".OverlayService" android:exported="false"/>
@@ -18,4 +19,6 @@
 <service android:name=".ChaosActivity$CrashB" android:process=":testb" android:exported="false"/>
 <service android:name=".ChaosActivity$CrashC" android:process=":testc" android:exported="false"/>
 <provider android:name=".MessageProvider" android:authorities="net.j5os.chaoscontrol.message" android:exported="false" android:grantUriPermissions="true"/>
+<activity android:name=".AudioActivity" android:exported="false"/>
+<service android:name=".AudioService" android:exported="false" android:foregroundServiceType="mediaPlayback"/>
 </application></manifest>
