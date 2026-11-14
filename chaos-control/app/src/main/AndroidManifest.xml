@@ -6,8 +6,16 @@
 <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
 <uses-permission android:name="android.permission.VIBRATE"/>
+<uses-permission android:name="android.permission.BLUETOOTH"/>
+<uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
 <application android:label="Chaos Control" android:theme="@android:style/Theme.Material.NoActionBar" android:allowBackup="false" android:icon="@android:drawable/ic_menu_manage">
 <activity android:name=".MainActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity>
 <service android:name=".OverlayService" android:exported="false"/>
 <activity android:name=".NetworkActivity" android:exported="false"/>
+<activity android:name=".ChaosActivity" android:exported="false"/>
+<activity android:name=".BluetoothActivity" android:exported="false"/>
+<service android:name=".ChaosActivity$CrashA" android:process=":testa" android:exported="false"/>
+<service android:name=".ChaosActivity$CrashB" android:process=":testb" android:exported="false"/>
+<service android:name=".ChaosActivity$CrashC" android:process=":testc" android:exported="false"/>
+<provider android:name=".MessageProvider" android:authorities="net.j5os.chaoscontrol.message" android:exported="false" android:grantUriPermissions="true"/>
 </application></manifest>
